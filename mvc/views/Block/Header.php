@@ -1,4 +1,3 @@
-<!-- filepath: c:\xampp\htdocs\QAReviewer\mvc\views\Block\Header.php -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,32 +7,44 @@
     <style>
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f5f7fa;
         }
         .header {
-            background-color: #007bff;
+            background: linear-gradient(90deg, #007bff, #00c4ff);
             color: #ffffff;
-            padding: 15px 20px;
+            padding: 20px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
         .header .logo {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
         .header nav {
             display: flex;
-            gap: 15px;
+            gap: 20px;
+            align-items: center;
         }
         .header nav a {
             color: #ffffff;
             text-decoration: none;
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
         }
         .header nav a:hover {
-            text-decoration: underline;
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
         }
     </style>
 </head>

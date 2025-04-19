@@ -39,7 +39,7 @@
         unset($_SESSION['username']);
         unset($_SESSION['password']);
         session_destroy();
-        header("Location: QAReviewer/Auth/Login");
+        header("Location: /QAReviewer/Home/");
         exit();
 
     }
