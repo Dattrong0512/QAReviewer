@@ -17,6 +17,7 @@
                 session_start();
                 $_SESSION['username'] = $username;
                 $_SESSION['password'] = $password;
+                $_SESSION['role'] = $user[0]['Role'];
                 $view = $this->view("Layout/MainLayout",["Page" => "Page/Home"]);
             }
             else
