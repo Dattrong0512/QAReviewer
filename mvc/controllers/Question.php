@@ -4,7 +4,7 @@ class Question extends Controller
 {
     public function List()
     {
-        $model = $this->model("AskAndAnswerModel");
+        $model = $this->model("QuestionAndAnswerModel");
 
         // Lấy tham số page từ query string, mặc định là 1
         $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
@@ -42,7 +42,55 @@ class Question extends Controller
 
         // Trả về view nếu không phải yêu cầu AJAX
         $this->view("Layout/MainLayout", [
-            "Page" => "Page/Home",
+            "Page" => "Page/Question",
+            "AskAndAnswerData" => json_encode($groupedData),
+            "TotalPages" => $totalPages,
+            "CurrentPage" => $page
+        ]);
+    }
+
+    public function Filter()
+    {
+        $model = $this->model("QuestionAndAnswerModel");
+
+        // Lấy tham số page và tag từ query string
+        $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+        $tag = isset($_GET['tag']) ? trim($_GET['tag']) : '';
+        $itemsPerPage = 5; // Số câu hỏi mỗi trang
+
+        // Tính offset
+        $offset = ($page - 1) * $itemsPerPage;
+
+        // Lấy dữ liệu phân trang từ model, lọc theo tag
+        $data = $model->GetAskAndAnswerWithPaginationAndTag($offset, $itemsPerPage, $tag);
+        $totalQuestions = $model->GetTotalQuestionsByTag($tag);
+        $totalPages = max(1, ceil($totalQuestions / $itemsPerPage)); // Đảm bảo ít nhất 1 trang
+
+        // Log để kiểm tra dữ liệu
+        error_log("Filter - Page: $page, Offset: $offset, Tag: $tag, Total Questions: $totalQuestions, Total Pages: $totalPages, Data: " . print_r($data, true));
+
+        // Nhóm dữ liệu thành danh sách câu hỏi
+        $groupedData = $this->groupData($data);
+
+        // Log dữ liệu đã nhóm
+        error_log("Filter - Grouped Data: " . print_r($groupedData, true));
+
+        // Xử lý yêu cầu AJAX
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            $response = [
+                'questions' => $groupedData,
+                'totalPages' => $totalPages,
+                'currentPage' => $page,
+                'message' => empty($groupedData) ? 'Không có câu hỏi nào cho tag này.' : ''
+            ];
+            echo json_encode($response);
+            exit;
+        }
+
+        // Trả về view nếu không phải yêu cầu AJAX
+        $this->view("Layout/MainLayout", [
+            "Page" => "Page/Question",
             "AskAndAnswerData" => json_encode($groupedData),
             "TotalPages" => $totalPages,
             "CurrentPage" => $page
@@ -68,6 +116,7 @@ class Question extends Controller
                 $questions[$qId] = [
                     "id" => $qId,
                     "text" => $row['Question'],
+                    "tags" => $row['Tags'],
                     "asker" => $row['UserName'],
                     "createdDate" => $row['CreatedDate'],
                     "answers" => []
@@ -82,7 +131,7 @@ class Question extends Controller
                     "answerer" => $row['UserName1'] ?? $row['UserName'],
                     "createdDate" => $row['CreatedDate1'] ?? $row['CreatedDate'],
                     "averageRating" => floatval($row['AverageRating'] ?? 0),
-                    "numberEvaluators" => $row['NumberEvaluaters'] ?? 0,
+                    "numberEvaluators" => $row['NumberEvaluators'] ?? 0,
                     "evaluations" => []
                 ];
             }
@@ -103,5 +152,31 @@ class Question extends Controller
 
         // Chuyển mảng questions thành indexed array
         return array_values($questions);
+    }
+
+    public function GetAllTags()
+    {
+        $model = $this->model("QuestionAndAnswerModel");
+        $tagRows = $model->GetAllTags();
+
+        // Chuyển đổi danh sách tags từ dạng chuỗi thành mảng các tag riêng lẻ
+        $allTags = [];
+        foreach ($tagRows as $row) {
+            $tags = explode(',', $row['Tags']);
+            foreach ($tags as $tag) {
+                $tag = trim($tag);
+                if (!empty($tag) && !in_array($tag, $allTags)) {
+                    $allTags[] = $tag;
+                }
+            }
+        }
+
+        // Sắp xếp tags theo thứ tự alphabet để dễ đọc
+        sort($allTags);
+
+        // Trả về dưới dạng JSON
+        header('Content-Type: application/json');
+        echo json_encode($allTags);
+        exit();
     }
 }

@@ -22,6 +22,8 @@
             position: sticky;
             top: 0;
             z-index: 1000;
+            width: 100%;
+            box-sizing: border-box; /* Đảm bảo padding không làm tăng chiều rộng */
         }
         .header .logo {
             font-size: 28px;
@@ -80,9 +82,9 @@
             min-width: 150px;
             text-align: left;
             z-index: 100;
-            font-family: 'Roboto', 'Arial', sans-serif; /* Thay đổi font chữ */
-            font-size: 16px; /* Tăng kích thước chữ */
-            font-weight: 600; /* Làm chữ đậm hơn để rõ ràng */
+            font-family: 'Roboto', 'Arial', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
         }
         .user-info:hover .info-box {
             opacity: 1;
@@ -97,7 +99,7 @@
             font-weight: 700;
         }
         .user-info .info-box .value {
-            color:#6495ED;
+            color: #6495ED;
             font-weight: 600;
         }
     </style>
@@ -107,7 +109,7 @@
         <div class="logo">QAReviewer</div>
         <nav>
             <a href="/QAReviewer/Home">Home</a>
-            <a href="/QAReviewer/About">About</a>
+
             <?php if (isset($_SESSION['username'])): ?>          
                 <a href="/QAReviewer/Auth/Logout">Logout</a>
                 <div class="user-info">
@@ -124,7 +126,6 @@
                     </div>
                 </div>
             <?php else: ?>
-                <a href="/QAReviewer/Auth/Register">Register</a>
                 <a href="/QAReviewer/Auth/Login">Login</a>               
             <?php endif; ?>
         </nav>
