@@ -86,27 +86,31 @@ $(document).ready(function () {
 
             const $answerSection = $questionDiv.find(`#answers-${question.id}`);
             question.answers.forEach(answer => {
-                const ratingInfoHtml = answer.numberEvaluators > 0 ? `
+                // Xử lý chi tiết đánh giá
+                const evaluationsHtml = answer.evaluations && answer.evaluations.length > 0
+                    ? answer.evaluations.map(eval => {
+                        // Xử lý giá trị rating từ chuỗi (ví dụ: "4STAR" -> 4)
+                        const ratingValue = parseFloat(eval.rating) || 0;
+                        const starText = `${ratingValue.toFixed(1)} STAR`;
+                        return `
+                            <div class="evaluation-item">
+                                <span class="evaluator-name">${eval.evaluator}</span>
+                                <span class="rating-text">${starText}</span>
+                                <div class="rating-stars" data-rating="${ratingValue}"></div>
+                            </div>
+                        `;
+                    }).join('')
+                    : '<p>Chưa có đánh giá nào.</p>';
+
+                const ratingInfoHtml = `
                     <div class="rating-info">
-                        Số lượt đánh giá: <span class="toggle-evaluations" data-answer-id="${answer.id}">${answer.numberEvaluators}</span>
-                        <div class="evaluation-details" id="evaluations-${answer.id}">
-                            ${answer.evaluations.map(eval => {
-                                console.log(`Evaluator: ${eval.evaluator}, Rating: ${eval.rating}`);
-
-                                const ratingValue = parseFloat(eval.rating).toFixed(1);
-                                const starText = `${ratingValue} STAR`;
-
-                                return `
-                                    <div class="evaluation-item">
-                                        <span class="evaluator-name">${eval.evaluator}</span>
-                                        <span class="rating-text">${starText}</span>
-                                        <div class="rating-stars" data-rating="${ratingValue}"></div>
-                                    </div>
-                                `;
-                            }).join('')}
+                        Số lượt đánh giá: <span class="toggle-evaluations" data-answer-id="${answer.id}">${answer.numberEvaluators || 0}</span>
+                                            <div class="evaluation-details" id="evaluations-${answer.id}">
+                         ${evaluationsHtml}
                         </div>
                     </div>
-                ` : '';
+
+                `;
 
                 const $answerDiv = $('<div>').addClass('answer-item').html(`
                     <div class="answer-content-wrapper">
@@ -115,8 +119,10 @@ $(document).ready(function () {
                             Trả lời bởi: ${answer.answerer} | ${answer.createdDate}
                         </div>
                     </div>
-                    <div class="rating-stars" data-rating="${answer.averageRating.toFixed(1)}"></div>
-                    ${ratingInfoHtml}
+                    <div class="rating-wrapper">
+                        <div class="rating-stars" data-rating="${answer.averageRating || 0}"></div>
+                        ${ratingInfoHtml}
+                    </div>
                 `);
                 $answerSection.append($answerDiv);
             });
@@ -124,18 +130,19 @@ $(document).ready(function () {
             $questionList.append($questionDiv);
         });
 
+        // Sự kiện rê chuột để hiển thị chi tiết đánh giá
         $questionList.on('mouseenter', '.toggle-evaluations', function () {
             const answerId = $(this).data('answer-id');
             const $evaluations = $(`#evaluations-${answerId}`);
-            $evaluations.css('display', 'block');
-            updateStars();
+            $evaluations.show();
+            updateStars(); // Cập nhật sao khi hiển thị
             console.log(`Showing evaluations for answer ${answerId}`);
         });
 
         $questionList.on('mouseleave', '.toggle-evaluations', function () {
             const answerId = $(this).data('answer-id');
             const $evaluations = $(`#evaluations-${answerId}`);
-            $evaluations.css('display', 'none');
+            $evaluations.hide();
             console.log(`Hiding evaluations for answer ${answerId}`);
         });
 
@@ -145,26 +152,30 @@ $(document).ready(function () {
             $answerSection.toggle();
         });
 
-        updateStars();
+        updateStars(); // Cập nhật sao sau khi render
     }
 
     // Hàm cập nhật ngôi sao đánh giá
     function updateStars() {
         $('.rating-stars').each(function () {
-            const rating = parseFloat($(this).data('rating'));
+            const rating = parseFloat($(this).data('rating')) || 0;
             if (isNaN(rating)) return;
-
-            const fullStars = Math.floor(rating);
-            const emptyStars = 5 - fullStars;
-
+    
+            const fullStars = Math.floor(rating); // Số sao đầy
+            const hasHalfStar = rating % 1 !== 0; // Kiểm tra có nửa sao không
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0); // Số sao rỗng
+    
             let starsHtml = '';
             for (let i = 0; i < fullStars; i++) {
                 starsHtml += '<span class="star full">★</span>';
             }
+            if (hasHalfStar) {
+                starsHtml += '<span class="star half">★</span>'; // Nửa sao
+            }
             for (let i = 0; i < emptyStars; i++) {
                 starsHtml += '<span class="star empty">☆</span>';
             }
-
+    
             $(this).html(starsHtml);
         });
     }
@@ -239,30 +250,31 @@ $(document).ready(function () {
     }
 
     // Lấy tất cả tags khi trang load
-    fetchAllTags();
+        // Lấy tất cả tags khi trang load
+        fetchAllTags();
 
-    // Sự kiện click cho phân trang
-    $(document).on('click', '.page-btn', function () {
-        const page = $(this).data('page');
-        fetchQuestions(page);
-    });
-
-    // Sự kiện tìm kiếm (client-side)
-    $searchInput.on('input', function () {
-        const searchTerm = $searchInput.val().toLowerCase().trim();
-        let filteredQuestions = window.questions;
-
-        if (searchTerm) {
-            filteredQuestions = filteredQuestions.filter(question => {
-                const matchText = question.text.toLowerCase().includes(searchTerm);
-                const matchAsker = question.asker.toLowerCase().includes(searchTerm);
-                const tags = parseTags(question.tags);
-                const matchTags = tags.some(tag => tag.toLowerCase().includes(searchTerm));
-                return matchText || matchAsker || matchTags;
-            });
-        }
-
-        renderQuestions(filteredQuestions);
-        renderTagList(); // Cập nhật tag list để đánh dấu tag đang chọn
-    });
+        // Sự kiện click cho phân trang
+        $(document).on('click', '.page-btn', function () {
+            const page = $(this).data('page');
+            fetchQuestions(page);
+        });
+    
+        // Sự kiện tìm kiếm (client-side)
+        $searchInput.on('input', function () {
+            const searchTerm = $searchInput.val().toLowerCase().trim();
+            let filteredQuestions = window.questions;
+    
+            if (searchTerm) {
+                filteredQuestions = filteredQuestions.filter(question => {
+                    const matchText = question.text.toLowerCase().includes(searchTerm);
+                    const matchAsker = question.asker.toLowerCase().includes(searchTerm);
+                    const tags = parseTags(question.tags);
+                    const matchTags = tags.some(tag => tag.toLowerCase().includes(searchTerm));
+                    return matchText || matchAsker || matchTags;
+                });
+            }
+    
+            renderQuestions(filteredQuestions);
+            renderTagList(); // Cập nhật tag list để đánh dấu tag đang chọn
+        });
 });

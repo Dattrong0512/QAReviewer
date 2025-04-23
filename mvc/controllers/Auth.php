@@ -15,6 +15,7 @@
             if($user)
             {
                 session_start();
+                $_SESSION['userID'] = $user[0]['UserID'];
                 $_SESSION['username'] = $username;
                 $_SESSION['password'] = $password;
                 $_SESSION['role'] = $user[0]['Role'];

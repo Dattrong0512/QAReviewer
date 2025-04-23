@@ -9,9 +9,8 @@ class QuestionAndAnswerModel extends DB
     public function GetAskAndAnswerWithPagination($offset, $itemsPerPage)
     {
         // Bước 1: Lấy danh sách QuestionID theo phân trang
-        $subQuery = "SELECT QuestionID 
+        $subQuery = "SELECT distinct QuestionID 
                      FROM questions 
-                     WHERE EXISTS (SELECT 1 FROM answers WHERE answers.QuestionID = questions.QuestionID)
                      ORDER BY CreatedDate DESC 
                      LIMIT ?, ?";
 
@@ -61,9 +60,9 @@ class QuestionAndAnswerModel extends DB
                             WHERE awv2.AnswerID = aw.AnswerID
                         ) AS AverageRating
                     FROM questions qs
-                    JOIN answers aw ON qs.QuestionID = aw.QuestionID
-                    JOIN users us_question ON qs.UserID = us_question.UserID
-                    JOIN users us_answer ON aw.UserID = us_answer.UserID
+                    LEFT JOIN answers aw ON qs.QuestionID = aw.QuestionID
+                    LEFT JOIN users us_question ON qs.UserID = us_question.UserID
+                    LEFT JOIN  users us_answer ON aw.UserID = us_answer.UserID
                     LEFT JOIN answer_evaluates awv ON aw.AnswerID = awv.AnswerID
                     LEFT JOIN users us_evaluator ON awv.UserID = us_evaluator.UserID
                     WHERE qs.QuestionID IN ($placeholders)
@@ -75,6 +74,7 @@ class QuestionAndAnswerModel extends DB
         $result = $stmt->get_result();
         return $result->fetch_all(MYSQLI_ASSOC);
     }
+
 
     public function GetAskAndAnswerWithPaginationAndTag($offset, $itemsPerPage, $tag)
     {
@@ -150,9 +150,8 @@ class QuestionAndAnswerModel extends DB
 
     public function GetTotalQuestions()
     {
-        $query = "SELECT COUNT(DISTINCT qs.QuestionID) AS total 
-                  FROM questions qs 
-                  WHERE EXISTS (SELECT 1 FROM answers WHERE answers.QuestionID = qs.QuestionID)";
+        $query = "SELECT COUNT(DISTINCT QuestionID) AS total 
+                  FROM questions";
         $result = mysqli_query($this->conn, $query);
         $row = $result->fetch_assoc();
         return $row['total'];
@@ -184,5 +183,52 @@ class QuestionAndAnswerModel extends DB
         }
     
         return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+
+    public function AddAnswerForQuestion($questionId, $answer, $userId)
+    {
+        $number = 0;
+        $numberEvaluaters = "Select NumberEvaluater from answers where QuestionID = ?";
+        $stmt = $this->conn->prepare($numberEvaluaters);
+        $stmt->bind_param("i", $questionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        if($row == null){
+            $number = 0;
+        }
+        else{
+            $number = $row['NumberEvaluaters'];
+        }
+        $number += 1;
+
+        $query = "INSERT INTO answers (QuestionID, Answer, Reference, UserID, CreatedDate, NumberEvaluaters) 
+                  VALUES (?, ?, 'Source 1', ?, NOW(), $number)";
+        
+        // Chuẩn bị câu lệnh
+        $stmt = $this->conn->prepare($query);
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $this->conn->error);
+        }
+        // Bind các tham số
+        $stmt->bind_param("isi", 
+            $questionId,  // QuestionID (int)
+            $answer,      // Answer (string)
+            $userId       // UserID (int)
+        );
+
+        // Thực thi câu lệnh
+        if (!$stmt->execute()) {
+            throw new Exception("Execute failed: " . $stmt->error);
+        }
+
+        // Lấy AnswerID vừa chèn
+        $newAnswerID = $this->conn->insert_id;
+
+        // Đóng statement
+        $stmt->close();
+        // Trả về AnswerID mới
+        return $newAnswerID;
     }
 }
