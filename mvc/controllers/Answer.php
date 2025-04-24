@@ -97,7 +97,7 @@ class Answer extends Controller
             $this->view("Layout/MainLayout", [
                 "Page" => "Page/Question",
                 "Message" => "Câu trả lời đã được gửi thành công.",
-                "AskAndAnswerData" => json_encode([]),
+                "AskAndAnswerData" => json_encode($response),
                 "TotalPages" => 1,
                 "CurrentPage" => 1
             ]);

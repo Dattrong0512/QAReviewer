@@ -14,11 +14,11 @@
 
             if($user)
             {
-                session_start();
-                $_SESSION['userID'] = $user[0]['UserID'];
-                $_SESSION['username'] = $username;
-                $_SESSION['password'] = $password;
-                $_SESSION['role'] = $user[0]['Role'];
+
+                $_SESSION['userID'] = $user[0]['UserID'] ?? null;
+                $_SESSION['username'] = $username ?? null;
+                $_SESSION['password'] = $password ?? null; 
+                $_SESSION['role'] = $user[0]['Role'] ?? "Guest";
                 header("Location: /QAReviewer/Home/");
             }
             else

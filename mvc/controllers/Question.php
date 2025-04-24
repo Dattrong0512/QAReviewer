@@ -1,140 +1,73 @@
 <?php
-
 class Question extends Controller
 {
     public function List()
     {
-        try {
-            $model = $this->model("QuestionAndAnswerModel");
-
-            // Lấy tham số page từ query string, mặc định là 1
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $itemsPerPage = 5; // Số câu hỏi mỗi trang
-
-            // Tính offset
-            $offset = ($page - 1) * $itemsPerPage;
-
-            // Lấy dữ liệu phân trang từ model
-            $data = $model->GetAskAndAnswerWithPagination($offset, $itemsPerPage);
-            if ($data === false) {
-                throw new Exception("Lỗi khi lấy dữ liệu từ cơ sở dữ liệu.");
-            }
-
-            $totalQuestions = $model->GetTotalQuestions();
-            if ($totalQuestions === false) {
-                throw new Exception("Lỗi khi lấy tổng số câu hỏi.");
-            }
-
-            $totalPages = max(1, ceil($totalQuestions / $itemsPerPage)); // Đảm bảo ít nhất 1 trang
-
-            // Log để kiểm tra dữ liệu
-            error_log("Page: $page, Offset: $offset, Total Questions: $totalQuestions, Total Pages: $totalPages, Data: " . print_r($data, true));
-
-            // Nhóm dữ liệu thành danh sách câu hỏi
-            $groupedData = $this->groupData($data);
-
-            // Log dữ liệu đã nhóm
-            error_log("Grouped Data: " . print_r($groupedData, true));
-
-            // Xử lý yêu cầu AJAX
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-                header('Content-Type: application/json');
-                $response = [
-                    'questions' => $groupedData,
-                    'totalPages' => $totalPages,
-                    'currentPage' => $page,
-                    'message' => empty($groupedData) ? 'Không có câu hỏi nào cho trang này.' : ''
-                ];
-                echo json_encode($response);
-                exit;
-            }
-
-            // Trả về view nếu không phải yêu cầu AJAX
-            $this->view("Layout/MainLayout", [
-                "Page" => "Page/Question",
-                "AskAndAnswerData" => json_encode($groupedData),
-                "TotalPages" => $totalPages,
-                "CurrentPage" => $page
-            ]);
-        } catch (Exception $e) {
-            // Xử lý lỗi và trả về JSON
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-                header('Content-Type: application/json');
-                http_response_code(500);
-                echo json_encode([
-                    'error' => true,
-                    'message' => 'Lỗi server: ' . $e->getMessage()
-                ]);
-                exit;
-            }
-            // Nếu không phải AJAX, ném lỗi để hiển thị trên giao diện
-            throw $e;
-        }
+        $this->handleQuestionRequest('list');
     }
 
     public function Search()
     {
+        $this->handleQuestionRequest('search');
+    }
+
+    public function Filter()
+    {
+        $this->handleQuestionRequest('filter');
+    }
+
+    private function handleQuestionRequest($type)
+    {
         try {
             $model = $this->model("QuestionAndAnswerModel");
-
-            // Lấy tham số query và page từ query string
-            $query = isset($_GET['query']) ? trim($_GET['query']) : '';
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $itemsPerPage = 5; // Số câu hỏi mỗi trang
-
-            // Tính offset
+            $page = max(1, intval($_GET['page'] ?? 1));
+            $itemsPerPage = 5;
             $offset = ($page - 1) * $itemsPerPage;
+            $filters = [];
 
-            // Lấy dữ liệu phân trang từ model, tìm kiếm theo query
-            $data = $model->SearchQuestions($offset, $itemsPerPage, $query);
+            if ($type === 'filter') {
+                $filters['tag'] = trim($_GET['tag'] ?? '');
+            } elseif ($type === 'search') {
+                $filters['search'] = trim($_GET['input'] ?? '');
+            }
+
+            $data = $model->getQuestions($offset, $itemsPerPage, $filters);
             if ($data === false) {
-                throw new Exception("Lỗi khi tìm kiếm dữ liệu.");
+                throw new Exception("Lỗi khi lấy dữ liệu từ cơ sở dữ liệu.");
             }
 
-            $totalQuestions = $model->GetTotalQuestionsBySearch($query);
+            $totalQuestions = $model->getTotalQuestions($filters);
             if ($totalQuestions === false) {
-                throw new Exception("Lỗi khi lấy tổng số câu hỏi tìm kiếm.");
+                throw new Exception("Lỗi khi lấy tổng số câu hỏi.");
             }
 
-            $totalPages = max(1, ceil($totalQuestions / $itemsPerPage)); // Đảm bảo ít nhất 1 trang
-
-            // Log để kiểm tra dữ liệu
-            error_log("Search - Query: $query, Page: $page, Offset: $offset, Total Questions: $totalQuestions, Total Pages: $totalPages, Data: " . print_r($data, true));
-
-            // Nhóm dữ liệu thành danh sách câu hỏi
+            $totalPages = max(1, ceil($totalQuestions / $itemsPerPage));
             $groupedData = $this->groupData($data);
 
-            // Log dữ liệu đã nhóm
-            error_log("Search - Grouped Data: " . print_r($groupedData, true));
+            error_log("$type - Page: $page, Offset: $offset, Filters: " . print_r($filters, true) . ", Total Questions: $totalQuestions, Total Pages: $totalPages");
 
-            // Xử lý yêu cầu AJAX
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
                 header('Content-Type: application/json');
-                $response = [
+                echo json_encode([
                     'questions' => $groupedData,
                     'totalPages' => $totalPages,
                     'currentPage' => $page,
-                    'message' => empty($groupedData) ? 'Không tìm thấy câu hỏi nào phù hợp.' : ''
-                ];
-                echo json_encode($response);
+                    'message' => empty($groupedData) ? 'Không có câu hỏi nào.' : ''
+                ]);
                 exit;
             }
 
-            // Trả về view nếu không phải yêu cầu AJAX
             $this->view("Layout/MainLayout", [
                 "Page" => "Page/Question",
                 "AskAndAnswerData" => json_encode($groupedData),
-                "TotalPages" => $totalPages,
-                "CurrentPage" => $page
+                "totalPages" => json_encode($totalPages),
+                "currentPage" => json_encode($page)
             ]);
         } catch (Exception $e) {
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
                 header('Content-Type: application/json');
                 http_response_code(500);
-                echo json_encode([
-                    'error' => true,
-                    'message' => 'Lỗi server: ' . $e->getMessage()
-                ]);
+                echo json_encode(['error' => true, 'message' => 'Lỗi server: ' . $e->getMessage()]);
                 exit;
             }
             throw $e;
@@ -143,165 +76,55 @@ class Question extends Controller
 
     private function groupData($rows)
     {
-        // Nếu không có dữ liệu, trả về mảng rỗng
-        if (empty($rows)) {
-            return [];
-        }
+        if (empty($rows)) return [];
 
         $questions = [];
-
-        // Nhóm dữ liệu theo QuestionID
         foreach ($rows as $row) {
             $qId = $row['QuestionID'];
-
-            // Khởi tạo thông tin câu hỏi nếu chưa có
             if (!isset($questions[$qId])) {
                 $questions[$qId] = [
                     "id" => $qId,
                     "text" => $row['Question'],
                     "tags" => $row['Tags'],
-                    "asker" => $row['UserName'],
+                    "asker" => $row['UserName'] ?? 'Ẩn danh',
                     "createdDate" => $row['CreatedDate'],
                     "answers" => []
                 ];
             }
 
-            // Nếu không có AnswerID, bỏ qua (trường hợp câu hỏi không có câu trả lời)
-            if (empty($row['AnswerID'])) {
-                continue;
-            }
+            if (empty($row['AnswerID'])) continue;
 
             $aId = $row['AnswerID'];
-
-            // Khởi tạo thông tin câu trả lời nếu chưa có
             if (!isset($questions[$qId]['answers'][$aId])) {
                 $evaluations = [];
-                $numberEvaluators = 0;
-                $averageRating = floatval($row['AverageRating'] ?? 0);
-
-                // Tính số lượng đánh giá và danh sách đánh giá
                 foreach ($rows as $r) {
                     if ($r['AnswerID'] == $aId && !empty($r['EvaluatorUserName']) && !empty($r['RateCategory'])) {
-                        // Kiểm tra trùng lặp đánh giá để tránh thêm nhiều lần
-                        $evalExists = false;
-                        foreach ($evaluations as $existingEval) {
-                            if ($existingEval['evaluator'] === $r['EvaluatorUserName'] && $existingEval['rating'] === $r['RateCategory']) {
-                                $evalExists = true;
-                                break;
-                            }
-                        }
-                        if (!$evalExists) {
-                            $evaluations[] = [
-                                "evaluator" => $r['EvaluatorUserName'],
-                                "rating" => $r['RateCategory']
-                            ];
-                        }
+                        $evaluations[] = [
+                            "evaluator" => $r['EvaluatorUserName'],
+                            "rating" => $r['RateCategory']
+                        ];
                     }
                 }
 
-                $numberEvaluators = count($evaluations);
-
-                // Tính lại averageRating dựa trên evaluations nếu có
-                if ($numberEvaluators > 0) {
-                    $totalRating = 0;
-                    foreach ($evaluations as $eval) {
-                        // Chuyển rating từ dạng "nSTAR" thành số (ví dụ: "4STAR" -> 4)
-                        $ratingValue = floatval(preg_replace('/[^0-9.]/', '', $eval['rating']));
-                        $totalRating += $ratingValue;
-                    }
-                    $averageRating = $totalRating / $numberEvaluators;
-                } else {
-                    $averageRating = 0; // Nếu không có đánh giá, đặt averageRating về 0
-                }
+                $numberEvaluators = count(array_unique(array_column($evaluations, 'evaluator')));
+                $averageRating = $numberEvaluators ? array_sum(array_map(fn($e) => floatval(preg_replace('/[^0-9.]/', '', $e['rating'])), $evaluations)) / $numberEvaluators : 0;
 
                 $questions[$qId]['answers'][$aId] = [
                     "id" => $aId,
                     "text" => $row['Answer'],
-                    "answerer" => $row['UserName1'] ?? $row['UserName'],
+                    "answerer" => $row['UserName1'] ?? $row['UserName'] ?? 'Ẩn danh',
                     "createdDate" => $row['CreatedDate1'] ?? $row['CreatedDate'],
                     "averageRating" => $averageRating,
                     "numberEvaluators" => $numberEvaluators,
-                    "evaluations" => $evaluations
+                    "evaluations" => array_values($evaluations)
                 ];
             }
         }
 
-        // Chuyển mảng answers từ associative sang indexed
         foreach ($questions as &$q) {
             $q['answers'] = array_values($q['answers']);
         }
-
-        // Chuyển mảng questions thành indexed array
         return array_values($questions);
-    }
-
-    public function Filter()
-    {
-        try {
-            $model = $this->model("QuestionAndAnswerModel");
-
-            // Lấy tham số page và tag từ query string
-            $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-            $tag = isset($_GET['tag']) ? trim($_GET['tag']) : '';
-            $itemsPerPage = 5; // Số câu hỏi mỗi trang
-
-            // Tính offset
-            $offset = ($page - 1) * $itemsPerPage;
-
-            // Lấy dữ liệu phân trang từ model, lọc theo tag
-            $data = $model->GetAskAndAnswerWithPaginationAndTag($offset, $itemsPerPage, $tag);
-            if ($data === false) {
-                throw new Exception("Lỗi khi lọc dữ liệu theo tag.");
-            }
-
-            $totalQuestions = $model->GetTotalQuestionsByTag($tag);
-            if ($totalQuestions === false) {
-                throw new Exception("Lỗi khi lấy tổng số câu hỏi theo tag.");
-            }
-
-            $totalPages = max(1, ceil($totalQuestions / $itemsPerPage)); // Đảm bảo ít nhất 1 trang
-
-            // Log để kiểm tra dữ liệu
-            error_log("Filter - Page: $page, Offset: $offset, Tag: $tag, Total Questions: $totalQuestions, Total Pages: $totalPages, Data: " . print_r($data, true));
-
-            // Nhóm dữ liệu thành danh sách câu hỏi
-            $groupedData = $this->groupData($data);
-
-            // Log dữ liệu đã nhóm
-            error_log("Filter - Grouped Data: " . print_r($groupedData, true));
-
-            // Xử lý yêu cầu AJAX
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-                header('Content-Type: application/json');
-                $response = [
-                    'questions' => $groupedData,
-                    'totalPages' => $totalPages,
-                    'currentPage' => $page,
-                    'message' => empty($groupedData) ? 'Không có câu hỏi nào cho tag này.' : ''
-                ];
-                echo json_encode($response);
-                exit;
-            }
-
-            // Trả về view nếu không phải yêu cầu AJAX
-            $this->view("Layout/MainLayout", [
-                "Page" => "Page/Question",
-                "AskAndAnswerData" => json_encode($groupedData),
-                "TotalPages" => $totalPages,
-                "CurrentPage" => $page
-            ]);
-        } catch (Exception $e) {
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-                header('Content-Type: application/json');
-                http_response_code(500);
-                echo json_encode([
-                    'error' => true,
-                    'message' => 'Lỗi server: ' . $e->getMessage()
-                ]);
-                exit;
-            }
-            throw $e;
-        }
     }
 
     public function GetAllTags()
@@ -309,37 +132,24 @@ class Question extends Controller
         try {
             $model = $this->model("QuestionAndAnswerModel");
             $tagRows = $model->GetAllTags();
-            if ($tagRows === false) {
-                throw new Exception("Lỗi khi lấy danh sách tags.");
-            }
-
-            // Chuyển đổi danh sách tags từ dạng chuỗi thành mảng các tag riêng lẻ
             $allTags = [];
             foreach ($tagRows as $row) {
-                $tags = explode(',', $row['Tags']);
-                foreach ($tags as $tag) {
+                foreach (explode(',', $row['Tags']) as $tag) {
                     $tag = trim($tag);
-                    if (!empty($tag) && !in_array($tag, $allTags)) {
+                    if ($tag && !in_array($tag, $allTags)) {
                         $allTags[] = $tag;
                     }
                 }
             }
-
-            // Sắp xếp tags theo thứ tự alphabet để dễ đọc
             sort($allTags);
-
-            // Trả về dưới dạng JSON
             header('Content-Type: application/json');
             echo json_encode($allTags);
-            exit();
+            exit;
         } catch (Exception $e) {
             header('Content-Type: application/json');
             http_response_code(500);
-            echo json_encode([
-                'error' => true,
-                'message' => 'Lỗi server: ' . $e->getMessage()
-            ]);
-            exit();
+            echo json_encode(['error' => true, 'message' => 'Lỗi server: ' . $e->getMessage()]);
+            exit;
         }
     }
 }

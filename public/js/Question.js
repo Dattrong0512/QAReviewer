@@ -1,14 +1,23 @@
 $(document).ready(function () {
-    console.log("Home.js loaded successfully");
+    console.log("Question.js loaded successfully");
+    console.log("Dữ liệu window.questions ban đầu:", window.questions);
 
-    const $questionList = $('#questionList');
-    const $searchInput = $('#searchInput');
-    const $tagList = $('#tagList');
-    const $pagination = $('.pagination');
-    let selectedTag = null; // Biến để lưu tag được chọn
-    let allTags = []; // Biến để lưu tất cả tags từ server
+    // Khai báo các biến DOM và trạng thái
+    const $questionList = $('#questionList'); // Danh sách câu hỏi
+    const $searchInput = $('#searchInput');   // Ô input tìm kiếm
+    const $tagList = $('#tagList');           // Danh sách tag
+    const $pagination = $('.pagination');     // Phân trang
+    let selectedTag = null;                   // Tag hiện tại được chọn
+    let allTags = [];                         // Mảng lưu tất cả tag từ server
+    let role = window.role;                   // Role của người dùng (có thể là null)
+    let userID = window.userID;               // ID người dùng (có thể là null)
+    let username = window.username;           // Username (có thể là null)
 
-    // Hàm chuyển đổi tags từ string thành mảng
+    console.log("Role:", role);
+    console.log("User ID:", userID);
+    console.log("Username:", username);
+
+    // Hàm chuyển đổi tags từ chuỗi thành mảng
     function parseTags(tags) {
         if (typeof tags === 'string') {
             return tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
@@ -22,7 +31,18 @@ $(document).ready(function () {
     function renderTagList() {
         $tagList.empty();
 
-        // Luôn hiển thị tất cả tags từ allTags
+        const $allTag = $('<span>')
+            .addClass('tag')
+            .text('Tất cả')
+            .on('click', function () {
+                selectedTag = null;
+                fetchQuestions(1);
+            });
+        if (!selectedTag) {
+            $allTag.addClass('active');
+        }
+        $tagList.append($allTag);
+
         allTags.forEach(tag => {
             const $tag = $('<span>')
                 .addClass('tag')
@@ -30,38 +50,21 @@ $(document).ready(function () {
                 .data('tag', tag)
                 .on('click', function () {
                     selectedTag = $(this).data('tag');
-                    fetchQuestions(1); // Quay lại trang 1 khi chọn tag mới
+                    fetchQuestions(1);
                 });
-
-            // Nếu tag này đang được chọn, thêm lớp active
             if (selectedTag === tag) {
                 $tag.addClass('active');
             }
-
             $tagList.append($tag);
         });
-
-        // Thêm nút "Tất cả"
-        const $allTag = $('<span>')
-            .addClass('tag')
-            .text('Tất cả')
-            .on('click', function () {
-                selectedTag = null;
-                fetchQuestions(1); // Quay lại trang 1 khi bỏ chọn tag
-            });
-
-        // Nếu không có tag nào được chọn, đánh dấu "Tất cả" là active
-        if (!selectedTag) {
-            $allTag.addClass('active');
-        }
-
-        $tagList.prepend($allTag);
     }
 
     // Hàm render danh sách câu hỏi
     function renderQuestions(questions) {
+        console.log("Rendering questions:", questions);
         $questionList.empty();
-        if (questions.length === 0) {
+
+        if (!Array.isArray(questions) || questions.length === 0) {
             $questionList.html('<p>Không có câu hỏi nào để hiển thị.</p>');
             return;
         }
@@ -76,9 +79,12 @@ $(document).ready(function () {
                 .addClass('question-item')
                 .attr('data-question-id', question.id)
                 .html(`
-                    <h3>${question.text}</h3>
+                    <div class="header-wrapper">
+                        <h3>${question.text}</h3>
+                        ${role === 'Answerer' || role === 'Admin' ? '<button class="button-answer">Thêm câu trả lời</button>' : ''}
+                    </div>
                     <div class="question-meta">
-                        Đặt bởi: ${question.asker} | ${question.createdDate}
+                        Đặt bởi: ${question.asker || 'Ẩn danh'} | ${question.createdDate}
                     </div>
                     ${tagsHtml}
                     <div class="answer-section" id="answers-${question.id}" style="display: none;"></div>
@@ -86,16 +92,12 @@ $(document).ready(function () {
 
             const $answerSection = $questionDiv.find(`#answers-${question.id}`);
             question.answers.forEach(answer => {
-                // Xử lý chi tiết đánh giá
                 const evaluationsHtml = answer.evaluations && answer.evaluations.length > 0
                     ? answer.evaluations.map(eval => {
-                        // Xử lý giá trị rating từ chuỗi (ví dụ: "4STAR" -> 4)
                         const ratingValue = parseFloat(eval.rating) || 0;
-                        const starText = `${ratingValue.toFixed(1)} STAR`;
                         return `
                             <div class="evaluation-item">
                                 <span class="evaluator-name">${eval.evaluator}</span>
-                                <span class="rating-text">${starText}</span>
                                 <div class="rating-stars" data-rating="${ratingValue}"></div>
                             </div>
                         `;
@@ -104,78 +106,77 @@ $(document).ready(function () {
 
                 const ratingInfoHtml = `
                     <div class="rating-info">
-                        Số lượt đánh giá: <span class="toggle-evaluations" data-answer-id="${answer.id}">${answer.numberEvaluators || 0}</span>
-                                            <div class="evaluation-details" id="evaluations-${answer.id}">
-                         ${evaluationsHtml}
+                        Số lượt đánh giá: <span class="toggle-evaluations" data-answer-id="${answer.id}">
+                            ${answer.numberEvaluators || 0}
+                        </span>
+                        <div class="evaluation-details" id="evaluations-${answer.id}">
+                            ${evaluationsHtml}
                         </div>
                     </div>
-
                 `;
 
-                const $answerDiv = $('<div>').addClass('answer-item').html(`
-                    <div class="answer-content-wrapper">
-                        <div class="answer-content">${answer.text}</div>
-                        <div class="answer-meta">
-                            Trả lời bởi: ${answer.answerer} | ${answer.createdDate}
+                const $answerDiv = $('<div>')
+                    .addClass('answer-item')
+                    .html(`
+                        <div class="answer-content-wrapper">
+                            <div class="answer-content">${answer.text}</div>
+                            <div class="answer-meta">
+                                Trả lời bởi: ${answer.answerer || 'Ẩn danh'} | ${answer.createdDate}
+                            </div>
                         </div>
-                    </div>
-                    <div class="rating-wrapper">
-                        <div class="rating-stars" data-rating="${answer.averageRating || 0}"></div>
-                        ${ratingInfoHtml}
-                    </div>
-                `);
+                        <div class="rating-wrapper">
+                            <div class="rating-stars" data-rating="${answer.averageRating || 0}"></div>
+                            ${ratingInfoHtml}
+                        </div>
+                    `);
                 $answerSection.append($answerDiv);
             });
 
             $questionList.append($questionDiv);
         });
 
-        // Sự kiện rê chuột để hiển thị chi tiết đánh giá
         $questionList.on('mouseenter', '.toggle-evaluations', function () {
             const answerId = $(this).data('answer-id');
-            const $evaluations = $(`#evaluations-${answerId}`);
-            $evaluations.show();
-            updateStars(); // Cập nhật sao khi hiển thị
-            console.log(`Showing evaluations for answer ${answerId}`);
+            $(`#evaluations-${answerId}`).show();
+            updateStars();
+            console.log(`Hiển thị đánh giá cho câu trả lời ${answerId}`);
         });
 
         $questionList.on('mouseleave', '.toggle-evaluations', function () {
             const answerId = $(this).data('answer-id');
-            const $evaluations = $(`#evaluations-${answerId}`);
-            $evaluations.hide();
-            console.log(`Hiding evaluations for answer ${answerId}`);
+            $(`#evaluations-${answerId}`).hide();
+            console.log(`Ẩn đánh giá cho câu trả lời ${answerId}`);
         });
 
         $questionList.on('click', '.question-item', function () {
             const questionId = $(this).data('question-id');
-            const $answerSection = $(`#answers-${questionId}`);
-            $answerSection.toggle();
+            $(`#answers-${questionId}`).toggle();
         });
 
-        updateStars(); // Cập nhật sao sau khi render
+        updateStars();
     }
 
-    // Hàm cập nhật ngôi sao đánh giá
+    // Hàm cập nhật hiển thị sao đánh giá
     function updateStars() {
         $('.rating-stars').each(function () {
             const rating = parseFloat($(this).data('rating')) || 0;
             if (isNaN(rating)) return;
-    
-            const fullStars = Math.floor(rating); // Số sao đầy
-            const hasHalfStar = rating % 1 !== 0; // Kiểm tra có nửa sao không
-            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0); // Số sao rỗng
-    
+
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 !== 0;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
             let starsHtml = '';
             for (let i = 0; i < fullStars; i++) {
                 starsHtml += '<span class="star full">★</span>';
             }
             if (hasHalfStar) {
-                starsHtml += '<span class="star half">★</span>'; // Nửa sao
+                starsHtml += '<span class="star half">★</span>';
             }
             for (let i = 0; i < emptyStars; i++) {
                 starsHtml += '<span class="star empty">☆</span>';
             }
-    
+
             $(this).html(starsHtml);
         });
     }
@@ -183,6 +184,7 @@ $(document).ready(function () {
     // Hàm render phân trang
     function renderPagination(totalPages, currentPage) {
         $pagination.empty();
+
         for (let i = 1; i <= totalPages; i++) {
             const activeClass = i === currentPage ? 'active' : '';
             const $pageBtn = $('<button>')
@@ -193,24 +195,24 @@ $(document).ready(function () {
         }
     }
 
-    // Hàm fetch tất cả tags từ server
+    // Hàm lấy tất cả tag từ server
     function fetchAllTags() {
         $.ajax({
             url: '/QAReviewer/Question/GetAllTags',
             method: 'GET',
             dataType: 'json',
             success: function (tags) {
-                allTags = tags; // Lưu tất cả tags vào biến toàn cục
-                renderTagList(); // Render tag list ngay sau khi lấy được tags
+                allTags = tags;
+                renderTagList();
             },
             error: function (xhr, status, error) {
-                console.error("AJAX Error (GetAllTags):", xhr, status, error);
+                console.error("Lỗi AJAX (GetAllTags):", xhr, status, error);
                 alert('Lỗi khi tải danh sách tags: ' + error);
             }
         });
     }
 
-    // Hàm fetch câu hỏi từ server
+    // Hàm lấy danh sách câu hỏi từ server
     function fetchQuestions(page) {
         const url = selectedTag
             ? `/QAReviewer/Question/Filter?tag=${encodeURIComponent(selectedTag)}&page=${page}`
@@ -221,10 +223,10 @@ $(document).ready(function () {
             method: 'GET',
             dataType: 'json',
             success: function (data) {
-                window.questions = data.questions; // Cập nhật dữ liệu toàn cục
+                window.questions = data.questions;
                 renderQuestions(data.questions);
                 renderPagination(data.totalPages, data.currentPage);
-                renderTagList(); // Cập nhật tag list để đánh dấu tag đang chọn
+                renderTagList();
                 if (data.message) {
                     alert(data.message);
                 }
@@ -235,46 +237,85 @@ $(document).ready(function () {
                 window.history.pushState({ page: page, tag: selectedTag }, '', newUrl);
             },
             error: function (xhr, status, error) {
-                console.error("AJAX Error:", xhr, status, error);
+                console.error("Lỗi AJAX:", xhr, status, error);
                 alert('Lỗi khi tải dữ liệu: ' + error);
             }
         });
     }
 
-    // Khởi tạo
-    if (typeof window.questions === 'undefined') {
-        console.error("window.questions is not defined");
-    } else {
-        console.log("window.questions:", window.questions);
-        renderQuestions(window.questions);
+    // Hàm tìm kiếm câu hỏi từ server
+    function getQuestionBySearch(inputSearch, page) {
+        const url = inputSearch
+            ? `/QAReviewer/Question/Search?input=${encodeURIComponent(inputSearch)}&page=${page}`
+            : `/QAReviewer/Question/List?page=${page}`;
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                if (data && data.questions) {
+                    window.questions = data.questions;
+                    renderQuestions(data.questions);
+                    renderPagination(data.totalPages, data.currentPage);
+                    renderTagList();
+                } else {
+                    console.error("Cấu trúc JSON không hợp lệ:", data);
+                    alert("Dữ liệu trả về không hợp lệ.");
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error("Lỗi AJAX:", xhr, status, error);
+                if (xhr.responseText) {
+                    console.error("Phản hồi server:", xhr.responseText);
+                }
+                alert('Lỗi khi tải dữ liệu: ' + error);
+            }
+        });
     }
 
-    // Lấy tất cả tags khi trang load
-        // Lấy tất cả tags khi trang load
-        fetchAllTags();
+    // Render dữ liệu ban đầu khi truy cập trang
+    let questionsData = window.questions;
+    if (typeof questionsData === 'undefined') {
+        console.error("window.questions is not defined");
+        questionsData = [];
+    }
 
-        // Sự kiện click cho phân trang
-        $(document).on('click', '.page-btn', function () {
-            const page = $(this).data('page');
-            fetchQuestions(page);
-        });
-    
-        // Sự kiện tìm kiếm (client-side)
-        $searchInput.on('input', function () {
-            const searchTerm = $searchInput.val().toLowerCase().trim();
-            let filteredQuestions = window.questions;
-    
-            if (searchTerm) {
-                filteredQuestions = filteredQuestions.filter(question => {
-                    const matchText = question.text.toLowerCase().includes(searchTerm);
-                    const matchAsker = question.asker.toLowerCase().includes(searchTerm);
-                    const tags = parseTags(question.tags);
-                    const matchTags = tags.some(tag => tag.toLowerCase().includes(searchTerm));
-                    return matchText || matchAsker || matchTags;
-                });
-            }
-    
-            renderQuestions(filteredQuestions);
-            renderTagList(); // Cập nhật tag list để đánh dấu tag đang chọn
-        });
+    if (Array.isArray(questionsData) && questionsData.length > 0) {
+        renderQuestions(questionsData);
+        renderPagination(window.totalPages, window.currentPage);
+    } else {
+        $questionList.html('<p>Không có câu hỏi nào để hiển thị.</p>');
+    }
+
+    // Lấy danh sách tag từ server
+    fetchAllTags();
+
+    // Gắn sự kiện click cho nút phân trang
+    $(document).on('click', '.page-btn', function () {
+        const page = $(this).data('page');
+        fetchQuestions(page);
+    });
+
+    // Gắn sự kiện tìm kiếm khi người dùng nhập
+    $searchInput.on('input', function () {
+        const searchTerm = $searchInput.val().toLowerCase().trim();
+        getQuestionBySearch(searchTerm, 1);
+
+        let filteredQuestions = window.questions || [];
+        if (searchTerm) {
+            filteredQuestions = filteredQuestions.filter(question => {
+                const text = (question.text || "").toLowerCase();
+                const asker = (question.asker || "").toLowerCase();
+                const tags = parseTags(question.tags);
+                const matchText = text.includes(searchTerm);
+                const matchAsker = asker.includes(searchTerm);
+                const matchTags = tags.some(tag => tag.toLowerCase().includes(searchTerm));
+                return matchText || matchAsker || matchTags;
+            });
+        }
+
+        renderQuestions(filteredQuestions);
+        renderTagList();
+    });
 });

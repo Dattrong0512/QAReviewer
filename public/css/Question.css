@@ -111,18 +111,43 @@ body {
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: background-color 0.3s ease;
+    overflow: visible; /* Đã có trong CSS của bạn */
 }
 
-.question-item:hover {
-    background-color: #f0f0f0;
+.question-item .header-wrapper {
+    display: flex;
+
+    margin-bottom: 10px; /* Khoảng cách với các phần tử bên dưới */
+}
+
+/* Định dạng nút "Thêm câu trả lời" với màu xám nhạt */
+
+/* Hiệu ứng khi hover nút */
+.button-answer:hover {
+    background-color: #c0c0c0; /* Màu xám đậm hơn khi hover */
+    border-color: #c0c0c0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Bóng đậm hơn */
+    transform: translateY(-2px); /* Nâng nút lên một chút */
 }
 
 .question-item h3 {
     margin: 0;
     font-size: 18px;
     color: #007bff;
-    display: flex-start;
-    width: 50%;
+    width: 80%;
+}
+.button-answer {
+    background-color: #d3d3d3; /* Màu xám nhạt */
+    color: #333333; /* Màu chữ tối để tương phản */
+    border: 2px solid #d3d3d3; /* Viền cùng màu */
+    border-radius: 25px; /* Bo góc */
+    padding: 8px 15px; /* Kích thước padding */
+    font-size: 14px; /* Kích thước chữ */
+    font-weight: bold; /* Đậm chữ */
+    cursor: pointer; /* Con trỏ chuột */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Bóng nhẹ */
+    transition: all 0.3s ease-in-out; /* Hiệu ứng chuyển đổi */
+    width: 20%;
 }
 
 .answer-create {
