@@ -135,6 +135,7 @@ $(document).ready(function () {
             $questionList.append($questionDiv);
         });
 
+        // Sự kiện hover để hiển thị/ẩn đánh giá
         $questionList.on('mouseenter', '.toggle-evaluations', function () {
             const answerId = $(this).data('answer-id');
             $(`#evaluations-${answerId}`).show();
@@ -148,9 +149,71 @@ $(document).ready(function () {
             console.log(`Ẩn đánh giá cho câu trả lời ${answerId}`);
         });
 
-        $questionList.on('click', '.question-item', function () {
-            const questionId = $(this).data('question-id');
-            $(`#answers-${questionId}`).toggle();
+        // Sự kiện click để hiển thị/ẩn answer-section
+        $questionList.on('click', '.question-item', function (e) {
+            // Tránh toggle answer-section khi click vào button-answer, input, hoặc submit-answer
+            if (!$(e.target).hasClass('button-answer') && !$(e.target).is('input') && !$(e.target).hasClass('submit-answer')) {
+                const questionId = $(this).data('question-id');
+                $(`#answers-${questionId}`).toggle();
+            }
+        });
+
+        // Sự kiện click vào nút button-answer để hiển thị ô nhập liệu
+        $questionList.on('click', '.button-answer', function () {
+            const questionId = $(this).closest('.question-item').data('question-id');
+            const $answerSection = $(`#answers-${questionId}`);
+
+            // Hiển thị answer-section nếu đang ẩn
+            $answerSection.show();
+
+            // Kiểm tra xem ô nhập liệu đã tồn tại chưa
+            if ($answerSection.find('.user-answer').length === 0) {
+                // Tạo ô nhập liệu và nút Gửi
+                const $userAnswer = $('<div>')
+                    .addClass('user-answer')
+                    .html(`
+                        <input type="text" id="answerInput-${questionId}" placeholder="Nhập câu trả lời của bạn">
+                        <button class="submit-answer">Gửi</button>
+                    `);
+
+                // Thêm ô nhập liệu vào đầu answer-section
+                $answerSection.prepend($userAnswer);
+            }
+        });
+
+        // Sự kiện click vào nút Gửi để gửi câu trả lời qua AJAX
+        $questionList.on('click', '.submit-answer', function () {
+            const $answerSection = $(this).closest('.answer-section');
+            const questionId = $answerSection.attr('id').replace('answers-', '');
+            const $answerInput = $answerSection.find(`#answerInput-${questionId}`);
+            const answerText = $answerInput.val().trim();
+
+            if (!answerText) {
+                alert('Vui lòng nhập câu trả lời!');
+                return;
+            }
+
+            // Gửi AJAX để lưu câu trả lời
+            $.ajax({
+                url: '/QAReviewer/Answer/Create',
+                method: 'POST',
+                data: { questionId: questionId, answerText: answerText },
+                success: function (response) {
+                    if (response.success) {
+                        alert('Câu trả lời đã được thêm thành công!');
+                        // Xóa ô nhập liệu sau khi gửi thành công
+                        $answerSection.find('.user-answer').remove();
+                        // Tải lại danh sách câu hỏi
+                        fetchQuestions(1);
+                    } else {
+                        alert('Lỗi khi thêm câu trả lời: ' + response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("Lỗi AJAX:", xhr, status, error);
+                    alert('Lỗi khi thêm câu trả lời: ' + error);
+                }
+            });
         });
 
         updateStars();

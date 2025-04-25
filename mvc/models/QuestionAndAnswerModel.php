@@ -140,7 +140,7 @@ class QuestionAndAnswerModel extends DB
      * @param int $questionId
      * @param string $answer
      * @param int $userId
-     * @return int
+     * @return bool
      */
     public function AddAnswerForQuestion($questionId, $answer, $userId)
     {
@@ -152,8 +152,7 @@ class QuestionAndAnswerModel extends DB
         if (!$stmt->execute()) {
             throw new Exception("Execute failed: " . $stmt->error);
         }
-        $newAnswerID = $this->conn->insert_id;
         $stmt->close();
-        return $newAnswerID;
+        return true;
     }
 }

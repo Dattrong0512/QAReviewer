@@ -1,117 +1,57 @@
 <?php
 class Answer extends Controller
 {
-    public function create()
+    public function sendResponse($success, $message = '')
     {
-        // Đảm bảo session đã được khởi tạo
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => $success,
+            'message' => $message
+        ]);
+        exit;
+    }
+    public function Create()
+    {
+        ob_start();
+        session_start();
+
+        // Log session để debug
+        error_log("Session role: " . ($_SESSION['role'] ?? 'Không có'));
+        error_log("Session userID: " . ($_SESSION['userID'] ?? 'Không có'));
+
+        if (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') {
+            ob_end_clean();
+            $this->sendResponse(false, 'Yêu cầu không hợp lệ: Chỉ hỗ trợ AJAX');
         }
 
-        // Khởi tạo model
-        $model = $this->model("QuestionAndAnswerModel");
+        $questionId = $_POST['questionId'] ?? null;
+        $answer = $_POST['answerText'] ?? null;
+        $userId = $_SESSION['userID'] ?? null;
 
-        // Kiểm tra người dùng đã đăng nhập và có vai trò phù hợp
-        if (!isset($_SESSION['Role']) || !in_array($_SESSION['Role'], ['Answerer', 'Admin'])) {
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Bạn không có quyền trả lời. Vui lòng đăng nhập với vai trò Answerer hoặc Admin.'
-                ]);
-                exit;
-            }
-            $this->view("Layout/MainLayout", [
-                "Page" => "Page/Error",
-                "ErrorMessage" => "Bạn không có quyền trả lời."
-            ]);
-            return;
+        if (empty($questionId) || empty($answer) || empty($userId)) {
+            ob_end_clean();
+            $this->sendResponse(false, 'Yêu cầu không hợp lệ: Thiếu thông tin cần thiết');
         }
 
-        // Kiểm tra userID và userName trong session
-        if (!isset($_SESSION['userID']) || !isset($_SESSION['userName'])) {
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Thông tin người dùng không hợp lệ. Vui lòng đăng nhập lại.'
-                ]);
-                exit;
-            }
+        if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['Admin', 'Answerer'])) {
+            ob_end_clean();
+            $this->sendResponse(false, 'Bạn không có quyền thực hiện hành động này.');
         }
 
-        // Lấy dữ liệu từ request (POST)
-        $input = json_decode(file_get_contents('php://input'), true);
-        $questionId = $input['questionId'] ?? null;
-        $answerText = $input['text'] ?? null;
-
-        // Log dữ liệu đầu vào
-        error_log("Answer Create - Input: " . print_r($input, true));
-
-        // Kiểm tra dữ liệu đầu vào
-        if (!$questionId || !$answerText) {
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Dữ liệu không hợp lệ. Vui lòng cung cấp QuestionID và nội dung câu trả lời.'
-                ]);
-                exit;
-            }
-        }
-
-        // Chuẩn bị dữ liệu
-        $userId = $_SESSION['userID'];
-        $userName = $_SESSION['userName'];
-
+        $model = $this->model('QuestionAndAnswerModel');
         try {
-            // Gọi model để chèn câu trả lời
-            $newAnswerID = $model->AddAnswerForQuestion($questionId, $answerText, $userId);
-
-            // Log kết quả
-            error_log("Answer Create - New AnswerID: $newAnswerID, QuestionID: $questionId, UserID: $userId");
-
-            // Chuẩn bị dữ liệu phản hồi
-            $response = [
-                'success' => true,
-                'answer' => [
-                    'id' => $newAnswerID,
-                    'questionId' => $questionId,
-                    'text' => $answerText,
-                    'reference' => 'Source 1',
-                    'answerer' => $userName,
-                    'userId' => $userId,
-                    'createdDate' => date('Y-m-d H:i:s'),
-                    'numberEvaluators' => 0,
-                    'averageRating' => 0.0,
-                    'evaluations' => []
-                ]
-            ];
-
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-                header('Content-Type: application/json');
-                echo json_encode($response);
-                exit;
+            $result = $model->AddAnswerForQuestion($questionId, $answer, $userId);
+            if ($result) {
+                ob_end_clean();
+                $this->sendResponse(true, 'Câu trả lời đã được thêm thành công!');
+            } else {
+                ob_end_clean();
+                $this->sendResponse(false, 'Lỗi khi thêm câu trả lời vào cơ sở dữ liệu.');
             }
-
-            $this->view("Layout/MainLayout", [
-                "Page" => "Page/Question",
-                "Message" => "Câu trả lời đã được gửi thành công.",
-                "AskAndAnswerData" => json_encode($response),
-                "TotalPages" => 1,
-                "CurrentPage" => 1
-            ]);
         } catch (Exception $e) {
-            error_log("Answer Create - Error: " . $e->getMessage());
-
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Lỗi khi lưu câu trả lời: ' . $e->getMessage()
-                ]);
-                exit;
-            }
+            ob_end_clean();
+            error_log("Lỗi trong Create: " . $e->getMessage());
+            $this->sendResponse(false, 'Lỗi không xác định: ' . $e->getMessage());
         }
     }
 }

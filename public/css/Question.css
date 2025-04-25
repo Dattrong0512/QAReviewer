@@ -129,7 +129,28 @@ body {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Bóng đậm hơn */
     transform: translateY(-2px); /* Nâng nút lên một chút */
 }
-
+.user-answer {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+}
+.user-answer input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.submit-answer {
+    padding: 8px 16px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.submit-answer:hover {
+    background-color: #218838;
+}
 .question-item h3 {
     margin: 0;
     font-size: 18px;
