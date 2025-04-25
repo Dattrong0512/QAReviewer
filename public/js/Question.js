@@ -92,8 +92,30 @@ $(document).ready(function () {
 
             const $answerSection = $questionDiv.find(`#answers-${question.id}`);
             question.answers.forEach(answer => {
-                const evaluationsHtml = answer.evaluations && answer.evaluations.length > 0
-                    ? answer.evaluations.map(eval => {
+                // Xử lý danh sách đánh giá: gom nhóm theo evaluator và tính trung bình nếu trùng
+                let processedEvaluations = [];
+                if (answer.evaluations && answer.evaluations.length > 0) {
+                    const evalMap = {};
+                    answer.evaluations.forEach(eval => {
+                        const evaluator = eval.evaluator;
+                        if (!evalMap[evaluator]) {
+                            evalMap[evaluator] = { ratings: [], evaluator: evaluator };
+                        }
+                        evalMap[evaluator].ratings.push(parseFloat(eval.rating) || 0);
+                    });
+
+                    for (const evaluator in evalMap) {
+                        const ratings = evalMap[evaluator].ratings;
+                        const averageRating = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+                        processedEvaluations.push({
+                            evaluator: evaluator,
+                            rating: averageRating
+                        });
+                    }
+                }
+
+                const evaluationsHtml = processedEvaluations.length > 0
+                    ? processedEvaluations.map(eval => {
                         const ratingValue = parseFloat(eval.rating) || 0;
                         return `
                             <div class="evaluation-item">
@@ -115,6 +137,11 @@ $(document).ready(function () {
                     </div>
                 `;
 
+                const hasUserEvaluated = processedEvaluations.some(eval => eval.evaluator === username);
+                const evaluaterRating = (role === 'Evaluater' && !hasUserEvaluated)
+                    ? `<button class="evaluater-create-rating" data-answer-id="${answer.id}">Đánh giá</button>`
+                    : '';
+
                 const $answerDiv = $('<div>')
                     .addClass('answer-item')
                     .html(`
@@ -127,6 +154,7 @@ $(document).ready(function () {
                         <div class="rating-wrapper">
                             <div class="rating-stars" data-rating="${answer.averageRating || 0}"></div>
                             ${ratingInfoHtml}
+                            ${evaluaterRating}
                         </div>
                     `);
                 $answerSection.append($answerDiv);
@@ -141,11 +169,14 @@ $(document).ready(function () {
     // Hàm cập nhật hiển thị sao đánh giá
     function updateStars() {
         $('.rating-stars').each(function () {
-            const rating = parseFloat($(this).data('rating')) || 0;
+            let rating = parseFloat($(this).data('rating')) || 0;
             if (isNaN(rating)) return;
 
+            // Chuẩn hóa rating về khoảng từ 0 đến 5
+            rating = Math.min(Math.max(rating, 0), 5);
+
             const fullStars = Math.floor(rating);
-            const hasHalfStar = rating % 1 !== 0;
+            const hasHalfStar = rating % 1 >= 0.5; // Chỉ hiển thị nửa sao nếu rating >= x.5
             const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
             let starsHtml = '';
@@ -260,23 +291,32 @@ $(document).ready(function () {
     // Sự kiện hover để hiển thị/ẩn đánh giá
     $questionList.on('mouseenter', '.toggle-evaluations', function () {
         const answerId = $(this).data('answer-id');
-        $(`#evaluations-${answerId}`).show();
-        updateStars();
-        console.log(`Hiển thị đánh giá cho câu trả lời ${answerId}`);
+        const $evaluationDetails = $(`#evaluations-${answerId}`);
+        if ($evaluationDetails.length) {
+            $evaluationDetails.show();
+            updateStars();
+            console.log(`Hiển thị đánh giá cho câu trả lời ${answerId}`);
+        }
     });
 
     $questionList.on('mouseleave', '.toggle-evaluations', function () {
         const answerId = $(this).data('answer-id');
-        $(`#evaluations-${answerId}`).hide();
-        console.log(`Ẩn đánh giá cho câu trả lời ${answerId}`);
+        const $evaluationDetails = $(`#evaluations-${answerId}`);
+        if ($evaluationDetails.length) {
+            $evaluationDetails.hide();
+            console.log(`Ẩn đánh giá cho câu trả lời ${answerId}`);
+        }
     });
 
     // Sự kiện click để hiển thị/ẩn answer-section
     $questionList.on('click', '.question-item', function (e) {
         if (!$(e.target).hasClass('button-answer') && !$(e.target).is('input') && !$(e.target).hasClass('submit-answer')) {
             const questionId = $(this).data('question-id');
-            $(`#answers-${questionId}`).toggle();
-            console.log(`Toggle answer-section cho câu hỏi ${questionId}`);
+            const $answerSection = $(`#answers-${questionId}`);
+            if ($answerSection.length) {
+                $answerSection.toggle();
+                console.log(`Toggle answer-section cho câu hỏi ${questionId}`);
+            }
         }
     });
 
@@ -313,6 +353,7 @@ $(document).ready(function () {
         $.ajax({
             url: '/QAReviewer/Answer/Create',
             method: 'POST',
+            dataType: 'json',
             data: { questionId: questionId, answerText: answerText },
             success: function (response) {
                 if (response.success) {
@@ -328,6 +369,90 @@ $(document).ready(function () {
                 console.log("Phản hồi server:", xhr.responseText);
                 alert('Lỗi khi thêm câu trả lời: ' + (xhr.responseText || error || 'Không xác định'));
             }
+        });
+    });
+
+    // Sự kiện click cho nút đánh giá
+    $questionList.on('click', '.evaluater-create-rating', function (e) {
+        e.stopPropagation(); // Ngăn sự kiện click lan tỏa
+        const $button = $(this);
+        const answerId = $button.data('answer-id');
+
+        // Kiểm tra nếu toggle đã tồn tại, thì xóa đi
+        const $existingToggle = $button.find('.rating-toggle');
+        if ($existingToggle.length) {
+            $existingToggle.remove();
+            return;
+        }
+
+        // Tạo toggle 1-5 sao
+        const $ratingToggle = $('<div>')
+            .addClass('rating-toggle')
+            .html(`
+                <div class="star-toggle" data-value="1">★</div>
+                <div class="star-toggle" data-value="2">★</div>
+                <div class="star-toggle" data-value="3">★</div>
+                <div class="star-toggle" data-value="4">★</div>
+                <div class="star-toggle" data-value="5">★</div>
+            `);
+
+        // Thêm toggle trực tiếp vào nút .evaluater-create-rating
+        $button.append($ratingToggle);
+
+        // Sự kiện hover cho các sao
+        $ratingToggle.find('.star-toggle').on('mouseover', function () {
+            const hoverValue = $(this).data('value');
+            $ratingToggle.find('.star-toggle').each(function () {
+                const starValue = $(this).data('value');
+                if (starValue <= hoverValue) {
+                    $(this).addClass('hover');
+                } else {
+                    $(this).removeClass('hover');
+                }
+            });
+        });
+
+        // Khi chuột rời khỏi toggle, xóa trạng thái hover
+        $ratingToggle.on('mouseleave', function () {
+            $ratingToggle.find('.star-toggle').removeClass('hover');
+        });
+
+        // Sự kiện click cho các sao trong toggle
+        $ratingToggle.find('.star-toggle').on('click', function () {
+            const rating = $(this).data('value');
+            $ratingToggle.find('.star-toggle').each(function () {
+                const starValue = $(this).data('value');
+                if (starValue <= rating) {
+                    $(this).addClass('selected');
+                } else {
+                    $(this).removeClass('selected');
+                }
+            });
+
+            // Gửi AJAX để lưu đánh giá
+            $.ajax({
+                url: '/QAReviewer/Evaluater/Create',
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    answerId: answerId,
+                    rating: rating
+                },
+                success: function (response) {
+                    if (response.success) {
+                        alert('Đánh giá thành công!');
+                        $ratingToggle.remove();
+                        fetchQuestions(1);
+                    } else {
+                        alert('Lỗi khi gửi đánh giá: ' + response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("Lỗi AJAX (Evaluation):", xhr, status, error);
+                    console.log("Phản hồi server:", xhr.responseText);
+                    alert('Lỗi khi gửi đánh giá: ' + error);
+                }
+            });
         });
     });
 

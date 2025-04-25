@@ -155,4 +155,71 @@ class QuestionAndAnswerModel extends DB
         $stmt->close();
         return true;
     }
+
+    /**
+     * Lấy danh sách câu trả lời mới nhất
+     * @param int $offset
+     * @param int $itemsPerPage
+     * @return array
+     */
+    public function GetAllNewestAnswer($offset, $itemsPerPage)
+    {
+        $query = "SELECT aw.AnswerID, aw.QuestionID, aw.Answer, aw.CreatedDate, aw.NumberEvaluaters, 
+                         us.UserID, us.UserName
+                  FROM answers aw
+                  LEFT JOIN users us ON aw.UserID = us.UserID
+                  ORDER BY aw.CreatedDate DESC 
+                  LIMIT ?, ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("ii", $offset, $itemsPerPage);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);     
+    }
+
+    /**
+     * Đếm tổng số câu trả lời
+     * @return int
+     */
+    public function GetTotalAnswers()
+    {
+        $query = "SELECT COUNT(*) AS total FROM answers";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stmt->close();
+        return $row['total'];
+    }
+
+    /**
+     * Lấy chi tiết câu hỏi theo ID
+     * @param int $questionId
+     * @return array
+     */
+    public function GetQuestionById($questionId)
+    {
+        $query = "SELECT 
+                     qs.QuestionID, qs.Question, qs.Tags, qs.CreatedDate, qs.NumberAnswerers,
+                     us_question.UserID, us_question.UserName, us_question.Role,
+                     aw.AnswerID, aw.Answer, aw.CreatedDate AS CreatedDate1, aw.NumberEvaluaters,
+                     us_answer.UserID AS UserID1, us_answer.UserName AS UserName1, us_answer.Role AS Role1,
+                     awv.UserID AS EvaluatorUserID, us_evaluator.UserName AS EvaluatorUserName, awv.RateCategory,
+                     (SELECT AVG(CAST(SUBSTRING(awv2.RateCategory, 1, LENGTH(awv2.RateCategory) - 4) AS DECIMAL))
+                      FROM answer_evaluates awv2 WHERE awv2.AnswerID = aw.AnswerID) AS AverageRating
+                  FROM questions qs
+                  LEFT JOIN answers aw ON qs.QuestionID = aw.QuestionID
+                  LEFT JOIN users us_question ON qs.UserID = us_question.UserID
+                  LEFT JOIN users us_answer ON aw.UserID = us_answer.UserID
+                  LEFT JOIN answer_evaluates awv ON aw.AnswerID = awv.AnswerID
+                  LEFT JOIN users us_evaluator ON awv.UserID = us_evaluator.UserID
+                  WHERE qs.QuestionID = ?
+                  ORDER BY qs.CreatedDate DESC, aw.CreatedDate, aw.AnswerID";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $questionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
 }

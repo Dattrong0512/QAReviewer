@@ -111,35 +111,34 @@ body {
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: background-color 0.3s ease;
-    overflow: visible; /* Đã có trong CSS của bạn */
+    overflow: visible;
 }
 
 .question-item .header-wrapper {
     display: flex;
-
-    margin-bottom: 10px; /* Khoảng cách với các phần tử bên dưới */
+    margin-bottom: 10px;
 }
 
-/* Định dạng nút "Thêm câu trả lời" với màu xám nhạt */
-
-/* Hiệu ứng khi hover nút */
 .button-answer:hover {
-    background-color: #c0c0c0; /* Màu xám đậm hơn khi hover */
+    background-color: #c0c0c0;
     border-color: #c0c0c0;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Bóng đậm hơn */
-    transform: translateY(-2px); /* Nâng nút lên một chút */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
 }
+
 .user-answer {
     margin-bottom: 10px;
     display: flex;
     gap: 10px;
 }
+
 .user-answer input {
     flex: 1;
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
 }
+
 .submit-answer {
     padding: 8px 16px;
     background-color: #28a745;
@@ -148,26 +147,29 @@ body {
     border-radius: 4px;
     cursor: pointer;
 }
+
 .submit-answer:hover {
     background-color: #218838;
 }
+
 .question-item h3 {
     margin: 0;
     font-size: 18px;
     color: #007bff;
     width: 80%;
 }
+
 .button-answer {
-    background-color: #d3d3d3; /* Màu xám nhạt */
-    color: #333333; /* Màu chữ tối để tương phản */
-    border: 2px solid #d3d3d3; /* Viền cùng màu */
-    border-radius: 25px; /* Bo góc */
-    padding: 8px 15px; /* Kích thước padding */
-    font-size: 14px; /* Kích thước chữ */
-    font-weight: bold; /* Đậm chữ */
-    cursor: pointer; /* Con trỏ chuột */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Bóng nhẹ */
-    transition: all 0.3s ease-in-out; /* Hiệu ứng chuyển đổi */
+    background-color: #d3d3d3;
+    color: #333333;
+    border: 2px solid #d3d3d3;
+    border-radius: 25px;
+    padding: 8px 15px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
     width: 20%;
 }
 
@@ -201,9 +203,11 @@ body {
     margin: 10px 0;
     transition: background-color 0.3s ease;
 }
+
 .answer-item, .question-item, .container {
-    overflow: visible; /* Đảm bảo không cắt nội dung con */
+    overflow: visible;
 }
+
 .answer-item:hover {
     background-color: #f0f0f0;
 }
@@ -227,6 +231,7 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    position: relative; /* Đảm bảo định vị con không bị ảnh hưởng */
 }
 
 .rating-stars {
@@ -238,15 +243,15 @@ body {
     font-size: 20px;
     position: relative;
     display: inline-block;
-    color: #ccc; /* Màu xám cho sao rỗng */
+    color: #ccc;
 }
 
 .star.full {
-    color: #ffd700; /* Màu vàng cho sao đầy */
+    color: #ffd700;
 }
 
 .star.half {
-    color: #ccc; /* Màu xám cho sao rỗng */
+    color: #ccc;
     position: relative;
     overflow: hidden;
 }
@@ -256,14 +261,13 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    width: 50%; /* Hiển thị nửa trái của sao */
-    color: #ffd700; /* Màu vàng cho nửa sao */
+    width: 50%;
+    color: #ffd700;
     overflow: hidden;
 }
 
 .rating-info {
     font-size: 14px;
-
     position: relative;
 }
 
@@ -275,18 +279,18 @@ body {
 
 .evaluation-details {
     position: absolute;
-    top: 100%; /* Đặt ngay bên dưới phần tử cha */
+    top: 100%;
     right: 4%;
-    transform: translateY(5px); /* Đẩy xuống một chút để tạo khoảng cách */
+    transform: translateY(5px);
     background: #ffffff;
     border: 1px solid #dddddd;
     border-radius: 4px;
     padding: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    display: none; /* Ẩn mặc định */
-    z-index: 9999; /* Đảm bảo hiển thị trên cùng */
+    display: none;
+    z-index: 9999;
     min-width: 200px;
-    white-space: nowrap; /* Đảm bảo nội dung không bị xuống dòng */
+    white-space: nowrap;
 }
 
 .evaluation-details p {
@@ -432,6 +436,52 @@ body {
 .tag.active {
     background-color: #007bff;
     color: #ffffff;
+}
+
+/* Kiểu cho nút đánh giá */
+.evaluater-create-rating {
+    background-color: #007bff;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.3s ease;
+    display: inline-block; /* Đảm bảo nút có kích thước chính xác để định vị toggle */
+}
+
+.evaluater-create-rating:hover {
+    background-color: #0056b3;
+}
+
+/* Kiểu cho toggle sao */
+.evaluater-create-rating .rating-toggle {
+    display: flex;
+    gap: 5px;
+    background: #ffffff;
+    border: 1px solid #dddddd;
+    border-radius: 4px;
+    padding: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: absolute;
+    top: 100%; /* Đặt ngay dưới nút */
+    left: 0; /* Căn trái với nút */
+    transform: translateY(5px); /* Tạo khoảng cách nhỏ dưới nút */
+    z-index: 1000;
+}
+
+.star-toggle {
+    font-size: 18px;
+    color: #ccc;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.star-toggle.hover,
+.star-toggle.selected {
+    color: #ffd700;
 }
 
 @media (max-width: 768px) {

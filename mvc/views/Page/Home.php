@@ -15,7 +15,7 @@
                 <?php
                 $actionLinks = [
                     ['text' => 'Danh sách câu hỏi', 'href' => '/QAReviewer/Question/List'],
-                    ['text' => 'Trả lời mới', 'href' => '/QAReviewer/Answer/New'],
+                    ['text' => 'Trả lời mới', 'href' => '/QAReviewer/Answer/ListAnswerNewest'],
                     ['text' => 'Đánh giá mới', 'href' => '/QAReviewer/Review/New']
                 ];
                 if (isset($_SESSION['role'])) {
