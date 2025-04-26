@@ -1,11 +1,9 @@
 <?php
 class Question extends Controller
 {
-
     public function Create()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
             $model = $this->model("QuestionAndAnswerModel");
             $question = trim($_POST['question'] ?? '');
             $tags = trim($_POST['tags'] ?? '');
@@ -22,9 +20,9 @@ class Question extends Controller
 
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'message' => 'Câu hỏi đã được tạo thành công.']);
-
         }
     }
+
     public function List()
     {
         $this->handleQuestionRequest('list');
@@ -98,6 +96,19 @@ class Question extends Controller
         }
     }
 
+    private function normalizeRating($rating)
+    {
+        // Chuẩn hóa giá trị rating (5STAR -> 5, 4STAR -> 4, v.v.)
+        $rating = trim($rating);
+        $normalized = floatval(preg_replace('/[^0-9.]/', '', $rating));
+        
+        // Đảm bảo giá trị nằm trong khoảng 1-5
+        if ($normalized < 1 || $normalized > 5) {
+            return 0; // Trả về 0 nếu giá trị không hợp lệ
+        }
+        return $normalized;
+    }
+
     private function groupData($rows)
     {
         if (empty($rows)) return [];
@@ -120,27 +131,56 @@ class Question extends Controller
 
             $aId = $row['AnswerID'];
             if (!isset($questions[$qId]['answers'][$aId])) {
+                // Thu thập tất cả đánh giá cho câu trả lời này
                 $evaluations = [];
                 foreach ($rows as $r) {
                     if ($r['AnswerID'] == $aId && !empty($r['EvaluatorUserName']) && !empty($r['RateCategory'])) {
-                        $evaluations[] = [
-                            "evaluator" => $r['EvaluatorUserName'],
-                            "rating" => $r['RateCategory']
-                        ];
+                        $normalizedRating = $this->normalizeRating($r['RateCategory']);
+                        if ($normalizedRating > 0) { // Chỉ thêm nếu rating hợp lệ
+                            $evaluations[] = [
+                                "evaluator" => $r['EvaluatorUserName'],
+                                "rating" => $normalizedRating
+                            ];
+                        }
                     }
                 }
 
-                $numberEvaluators = count(array_unique(array_column($evaluations, 'evaluator')));
-                $averageRating = $numberEvaluators ? array_sum(array_map(fn($e) => floatval(preg_replace('/[^0-9.]/', '', $e['rating'])), $evaluations)) / $numberEvaluators : 0;
+                // Gom nhóm đánh giá theo evaluator và tính trung bình cho mỗi người
+                $evaluatorRatings = [];
+                foreach ($evaluations as $eval) {
+                    $evaluator = $eval['evaluator'];
+                    if (!isset($evaluatorRatings[$evaluator])) {
+                        $evaluatorRatings[$evaluator] = [];
+                    }
+                    $evaluatorRatings[$evaluator][] = $eval['rating'];
+                }
+
+                // Tính trung bình cho từng evaluator
+                $averagePerEvaluator = [];
+                foreach ($evaluatorRatings as $evaluator => $ratings) {
+                    $average = array_sum($ratings) / count($ratings);
+                    $averagePerEvaluator[] = [
+                        "evaluator" => $evaluator,
+                        "rating" => $average
+                    ];
+                }
+
+                // Tính số lượng người đánh giá duy nhất
+                $numberEvaluators = count($averagePerEvaluator);
+
+                // Tính trung bình tổng từ các trung bình của từng evaluator
+                $averageRating = $numberEvaluators
+                    ? array_sum(array_column($averagePerEvaluator, 'rating')) / $numberEvaluators
+                    : 0;
 
                 $questions[$qId]['answers'][$aId] = [
                     "id" => $aId,
                     "text" => $row['Answer'],
                     "answerer" => $row['UserName1'] ?? $row['UserName'] ?? 'Ẩn danh',
                     "createdDate" => $row['CreatedDate1'] ?? $row['CreatedDate'],
-                    "averageRating" => $averageRating,
+                    "averageRating" => round($averageRating, 2), // Làm tròn để tránh số thập phân dài
                     "numberEvaluators" => $numberEvaluators,
-                    "evaluations" => array_values($evaluations)
+                    "evaluations" => array_values($averagePerEvaluator)
                 ];
             }
         }

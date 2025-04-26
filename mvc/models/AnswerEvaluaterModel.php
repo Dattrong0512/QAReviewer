@@ -8,7 +8,7 @@ class AnswerEvaluaterModel extends DB
      * @param string $rating
      * @return bool
      */
-    public function AddAnswerForQuestion($answerId, $rating)
+    public function AddEvaluatorForAnswer($answerId, $rating)
     {
         $query = "INSERT INTO ANSWER_EVALUATES (AnswerID, UserID, RateCategory, CreatedDate) 
                   VALUES (?, ?, ?, NOW())";

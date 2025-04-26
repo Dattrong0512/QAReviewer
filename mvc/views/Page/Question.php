@@ -47,6 +47,7 @@
             window.userID = <?php echo json_encode($_SESSION['userID'] ?? null); ?>;
             window.username = <?php echo json_encode($_SESSION['username'] ?? null); ?>;
         </script>
+        <script src="/QAReviewer/public/js/CommonUtils.js"></script>
         <script type="text/javascript" language="javascript" src="/QAReviewer/public/js/Question.js"></script>
     </div>
 </body>

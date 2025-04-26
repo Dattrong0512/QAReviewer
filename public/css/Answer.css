@@ -181,7 +181,7 @@ h1 {
 .rating-stars {
     display: flex;
     align-items: center;
-    order: 1; /* Đặt sao ở giữa */
+    order: 1;
 }
 
 .star {
@@ -214,7 +214,8 @@ h1 {
 .rating-info {
     font-size: 14px;
     color: #555555;
-    order: 2; /* Đặt số lượt đánh giá ở cuối */
+    order: 2;
+    position: relative;
 }
 
 .rating-info .toggle-evaluations {
@@ -224,7 +225,7 @@ h1 {
 }
 
 .evaluater-create-rating {
-    order: 3; /* Đặt nút đánh giá ở cuối cùng */
+    order: 3;
     margin-top: 5px;
     padding: 5px 10px;
     background-color: #007bff;
@@ -244,10 +245,20 @@ h1 {
     display: flex;
     gap: 5px;
     margin-top: 5px;
+    background: #ffffff;
+    border: 1px solid #dddddd;
+    border-radius: 4px;
+    padding: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    transform: translateY(5px);
+    z-index: 1000;
 }
 
 .star-toggle {
-    font-size: 20px;
+    font-size: 18px;
     color: #ccc;
     cursor: pointer;
     transition: color 0.2s ease;
@@ -262,8 +273,8 @@ h1 {
 .evaluation-details {
     position: absolute;
     top: 100%;
-    left: 0;
-    transform: translateY(5px);
+    left: 50%;
+    transform: translateX(-50%) translateY(5px);
     background: #ffffff;
     border: 1px solid #dddddd;
     border-radius: 4px;

@@ -31,6 +31,7 @@
             </div>
         </div>
     </div>
+    <script src="/QAReviewer/public/js/CommonUtils.js"></script>
     <script src="/QAReviewer/public/js/Answer.js"></script>
 </body>
 </html>
