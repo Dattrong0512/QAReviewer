@@ -27,7 +27,6 @@ $(document).ready(function () {
 
     // Hàm render danh sách đánh giá mới nhất
     function renderEvaluations(evaluations) {
-        console.log("Rendering evaluations:", evaluations);
         $evaluationList.empty();
 
         if (!Array.isArray(evaluations) || evaluations.length === 0) {
@@ -59,7 +58,7 @@ $(document).ready(function () {
 
     // Hàm render danh sách đánh giá của người dùng (bao gồm câu trả lời)
     function renderUserEvaluations(evaluations) {
-        console.log("Render user evaluations, dữ liệu:", evaluations);
+
         $userEvaluations.empty();
 
         if (!Array.isArray(evaluations) || evaluations.length === 0) {
@@ -69,7 +68,7 @@ $(document).ready(function () {
         }
 
         evaluations.forEach(evaluation => {
-            console.log("Thêm evaluation:", evaluation);
+
             const rating = normalizeRating(evaluation.RateCategory);
             const $evaluationDiv = $('<div>')
                 .addClass('evaluation-item')
@@ -93,7 +92,7 @@ $(document).ready(function () {
                     </div>
                 `);
             $userEvaluations.append($evaluationDiv);
-            console.log("HTML vừa thêm:", $evaluationDiv[0].outerHTML);
+    
         });
 
         console.log("Gọi CommonUtils.updateStars");

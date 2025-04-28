@@ -62,10 +62,7 @@ class Evaluater extends Controller
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        if (!isset($_SESSION['userID'])) {
-            header('Location: /QAReviewer/Auth/Login');
-            exit;
-        }
+
 
         $evaluations = $modelEvaluate->GetAllEvaluateAnswer($offset, $itemsPerPage);
         $totalEvaluations = $modelEvaluate->GetTotalEvaluations();

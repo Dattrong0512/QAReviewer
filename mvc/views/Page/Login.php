@@ -118,10 +118,6 @@
                 <label for="password">Mật khẩu</label>
                 <input type="password" id="password" name="password" placeholder="Nhập mật khẩu" required>
             </div>
-            <div class="remember-me">
-                <input type="checkbox" id="remember" name="remember">
-                <label for="remember">Ghi nhớ mật khẩu</label>
-            </div>
             <button type="submit" class="login-btn">Đăng Nhập</button>
         </form>
         <div class="error-message">

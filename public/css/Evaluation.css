@@ -19,32 +19,16 @@ body {
     overflow: visible;
 }
 
-h1, h2 {
+h1 {
     font-size: 24px;
     color: #333333;
     margin-bottom: 20px;
 }
 
-.header-section {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+h2 {
+    font-size: 24px;
+    color: #333333;
     margin-bottom: 20px;
-}
-
-.view-user-evaluations-btn {
-    padding: 8px 16px;
-    background-color: #28a745;
-    color: #ffffff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-}
-
-.view-user-evaluations-btn:hover {
-    background-color: #218838;
 }
 
 .qa-section {
@@ -109,23 +93,32 @@ h1, h2 {
     color: #333333;
 }
 
-.evaluation-meta, .answer-meta {
+.evaluation-meta {
     font-size: 14px;
     color: #555555;
     line-height: 1.5;
 }
 
-.answer-content-wrapper {
-    background: #fafafa;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 10px;
+.header-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
-.answer-content {
+.view-user-evaluations-btn {
+    padding: 8px 16px;
+    background-color: #28a745;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
     font-size: 16px;
-    margin-bottom: 5px;
-    color: #333333;
+    transition: background-color 0.3s ease;
+}
+
+.view-user-evaluations-btn:hover {
+    background-color: #218838;
 }
 
 .question-details {
@@ -136,7 +129,7 @@ h1, h2 {
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     max-height: 100%;
-    overflow-y: auto;
+
 }
 
 .question-details h2 {
@@ -204,6 +197,24 @@ h1, h2 {
 
 .answer-section .answer-item:hover {
     background-color: #f9f9f9;
+}
+
+.answer-content-wrapper {
+    flex: 1;
+}
+
+.answer-content {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333333;
+}
+
+.answer-meta {
+    font-size: 14px;
+    color: #555555;
+    margin-top: 5px;
+    line-height: 1.5;
 }
 
 .rating-wrapper {
@@ -320,7 +331,10 @@ h1, h2 {
     display: none;
     z-index: 9999;
     min-width: 200px;
-    white-space: nowrap;
+    max-width: 200px; /* Giới hạn chiều rộng để tránh mở rộng */
+    white-space: nowrap; /* Giữ giống answer.css */
+    overflow: hidden; /* Ẩn nội dung thừa */
+    text-overflow: ellipsis; /* Hiển thị dấu ba chấm khi nội dung bị cắt */
 }
 
 .evaluation-details p {
@@ -352,12 +366,18 @@ h1, h2 {
     align-items: center;
     font-size: 14px;
     margin: 5px 0;
+    white-space: nowrap; /* Ngăn nội dung xuống dòng */
+    overflow: hidden; /* Ẩn nội dung thừa */
+    text-overflow: ellipsis; /* Hiển thị dấu ba chấm khi nội dung bị cắt */
 }
 
 .evaluation-item .evaluater-name {
     margin-right: 10px;
     color: #333333;
     font-weight: bold;
+    white-space: nowrap; /* Ngăn tên người đánh giá xuống dòng */
+    overflow: hidden; /* Ẩn nội dung thừa */
+    text-overflow: ellipsis; /* Hiển thị dấu ba chấm khi nội dung bị cắt */
 }
 
 .question-tags {
@@ -452,16 +472,5 @@ h1, h2 {
 
     .rating-wrapper {
         margin-top: 10px;
-    }
-
-    .header-section {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .view-user-evaluations-btn {
-        width: 100%;
-        text-align: center;
     }
 }

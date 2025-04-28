@@ -20,7 +20,7 @@
                 ];
                 if (isset($_SESSION['role'])) {
                     if ($_SESSION['role'] === 'Questioner' || $_SESSION['role'] === 'Admin') {
-                        array_unshift($actionLinks, ['text' => 'Đặt câu hỏi', 'href' => '/QAReviewer/Question/Create']);
+                        array_unshift($actionLinks, ['text' => 'Đặt câu hỏi', 'href' => '/QAReviewer/Question/CreateQuestion']);
                     }
                 }
                 

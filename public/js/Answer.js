@@ -17,7 +17,6 @@ $(document).ready(function () {
 
     // Hàm render danh sách câu trả lời
     function renderAnswers(answers) {
-        console.log("Rendering answers:", answers);
         $answerList.empty();
 
         if (!Array.isArray(answers) || answers.length === 0) {

@@ -138,7 +138,7 @@ $(document).ready(function () {
                 `;
 
                 const hasUserEvaluated = processedEvaluations.some(eval => eval.evaluator === username);
-                const evaluatorRating = (role === 'Evaluater' && !hasUserEvaluated)
+                const evaluatorRating = ((role === 'Evaluater'|| role === 'Admin') && !hasUserEvaluated)
                     ? `<button class="evaluater-create-rating" data-answer-id="${answer.id}">Đánh giá</button>`
                     : '';
 
@@ -276,35 +276,111 @@ $(document).ready(function () {
     });
 
     // Sự kiện click vào nút Gửi để gửi câu trả lời qua AJAX
+       // Sự kiện click vào nút Gửi để gửi câu trả lời qua AJAX
     $questionList.on('click', '.submit-answer', function () {
         const $answerSection = $(this).closest('.answer-section');
         const questionId = $answerSection.attr('id').replace('answers-', '');
         const $answerInput = $answerSection.find(`#answerInput-${questionId}`);
         const answerText = $answerInput.val().trim();
 
+        // Reset thông báo lỗi cũ (nếu có)
+        $answerSection.find('.error-message').remove();
+
+        // Validation
+        let isValid = true;
+        let errorMessage = '';
+
+        // Kiểm tra không để trống
         if (!answerText) {
-            alert('Vui lòng nhập câu trả lời!');
+            errorMessage = 'Vui lòng nhập câu trả lời.';
+            isValid = false;
+        }
+        // Kiểm tra độ dài tối thiểu
+        else if (answerText.length < 5) {
+            errorMessage = 'Câu trả lời phải có ít nhất 10 ký tự.';
+            isValid = false;
+        }
+        // Kiểm tra độ dài tối đa
+        else if (answerText.length > 1000) {
+            errorMessage = 'Câu trả lời không được vượt quá 1000 ký tự.';
+            isValid = false;
+        }
+        // Kiểm tra nội dung không chỉ chứa ký tự không ý nghĩa
+        else if (!/[a-zA-Z0-9]/.test(answerText)) {
+            errorMessage = 'Câu trả lời phải chứa ít nhất một chữ cái hoặc số.';
+            isValid = false;
+        }
+
+        // Nếu không hợp lệ, hiển thị thông báo lỗi
+        if (!isValid) {
+            const $errorDiv = $('<div>')
+                .addClass('error-message')
+                .text(errorMessage)
+                .css({
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    fontStyle: 'italic'
+                });
+            $answerInput.after($errorDiv);
             return;
         }
 
+        // Nếu hợp lệ, gửi AJAX
         $.ajax({
             url: '/QAReviewer/Answer/Create',
             method: 'POST',
             dataType: 'json',
             data: { questionId: questionId, answerText: answerText },
+            beforeSend: function () {
+                // Vô hiệu hóa nút gửi khi đang xử lý
+                $(this).prop('disabled', true).text('Đang gửi...');
+            },
             success: function (response) {
                 if (response.success) {
+                    const $successDiv = $('<div>')
+                        .addClass('success-message')
+                        .text('Câu trả lời đã được thêm thành công!')
+                        .css({
+                            color: '#2f855a',
+                            fontSize: '12px',
+                            marginTop: '5px',
+                            textAlign: 'center'
+                        });
                     alert('Câu trả lời đã được thêm thành công!');
+                    $answerSection.prepend($successDiv);
                     $answerSection.find('.user-answer').remove();
                     fetchQuestions(1);
                 } else {
-                    alert('Lỗi khi thêm câu trả lời: ' + response.message);
+                    const $errorDiv = $('<div>')
+                        .addClass('error-message')
+                        .text('Lỗi khi thêm câu trả lời: ' + response.message)
+                        .css({
+                            color: '#dc2626',
+                            fontSize: '12px',
+                            marginTop: '5px',
+                            fontStyle: 'italic'
+                        });
+                    $answerInput.after($errorDiv);
                 }
             },
             error: function (xhr, status, error) {
                 console.error("Lỗi AJAX:", xhr, status, error);
                 console.log("Phản hồi server:", xhr.responseText);
-                alert('Lỗi khi thêm câu trả lời: ' + (xhr.responseText || error || 'Không xác định'));
+                const $errorDiv = $('<div>')
+                    .addClass('error-message')
+                    .text('Lỗi khi thêm câu trả lời: ' + (xhr.responseText || error || 'Không xác định'))
+                    .css({
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        fontStyle: 'italic'
+                    });
+                $answerInput.after($errorDiv);
+            },
+            complete: function () {
+                // Kích hoạt lại nút sau khi hoàn tất
+                $(this).prop('disabled', false).text('Gửi');
             }
         });
     });

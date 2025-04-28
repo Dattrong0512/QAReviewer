@@ -1,19 +1,21 @@
 <?php
-
 use Dom\Mysql;
+
+require_once 'config.inc.php';
 
 class DB
 {
     public $conn;
-    private $servername = "localhost";
-    private $username = "root";
-    private $password = "root";
-    private $dbname = "QAReviewerDB";
 
     function __construct()
     {
-        $this->conn = mysqli_connect($this->servername, $this->username, $this->password);
-        mysqli_select_db($this->conn, $this->dbname);
-        mysqli_query($this->conn, "SET NAMES 'utf8mb4'");
+        $this->conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        
+        if (!$this->conn) {
+            die("Connection failed: " . mysqli_connect_error());
+        }
+
+        mysqli_query($this->conn, "SET NAMES '" . DB_CHARSET . "'");
     }
 }
+?>

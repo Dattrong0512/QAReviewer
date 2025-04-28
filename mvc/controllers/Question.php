@@ -1,25 +1,40 @@
 <?php
 class Question extends Controller
 {
+    public function CreateQuestion()
+    {
+        $this->view("Layout/MainLayout", [
+            "Page" => "Page/CreateQuestion"
+        ]);
+    }
+    public function sendResponse($success, $message = '', $data = [])
+    {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => $success,
+            'message' => $message,
+            'data' => $data
+        ]);
+        exit;
+    }
     public function Create()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $model = $this->model("QuestionAndAnswerModel");
             $question = trim($_POST['question'] ?? '');
             $tags = trim($_POST['tags'] ?? '');
-            $userId = $_SESSION['userId'] ?? null;
+            $userId = $_SESSION['userID'] ?? null;
 
             if (empty($question) || empty($tags) || empty($userId)) {
                 throw new Exception("Vui lòng điền đầy đủ thông tin.");
             }
 
-            $result = $model->createQuestion($question, $tags, $userId);
+            $result = $model->CreateQuestion($question, $tags, $userId);
             if ($result === false) {
                 throw new Exception("Lỗi khi tạo câu hỏi.");
             }
 
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'message' => 'Câu hỏi đã được tạo thành công.']);
+            $this->sendResponse(true, 'Câu hỏi đã được tạo thành công!');
         }
     }
 

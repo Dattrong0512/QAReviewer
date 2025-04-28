@@ -32,7 +32,7 @@ class QuestionAndAnswerModel extends DB
         // Truy vấn QuestionID
         $whereClause = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
         $subQuery = "SELECT DISTINCT qs.QuestionID 
-                     FROM questions qs
+                      FROM questions qs
                      LEFT JOIN users us_question ON qs.UserID = us_question.UserID
                      $whereClause
                      ORDER BY qs.CreatedDate DESC 
@@ -74,7 +74,7 @@ class QuestionAndAnswerModel extends DB
                   LEFT JOIN answer_evaluates awv ON aw.AnswerID = awv.AnswerID
                   LEFT JOIN users us_evaluator ON awv.UserID = us_evaluator.UserID
                   WHERE qs.QuestionID IN ($placeholders)
-                  ORDER BY qs.QuestionID, qs.CreatedDate DESC, aw.CreatedDate, aw.AnswerID";
+                  ORDER BY qs.CreatedDate DESC";
 
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param(str_repeat('i', count($questionIds)), ...$questionIds);
@@ -174,7 +174,7 @@ class QuestionAndAnswerModel extends DB
         $stmt->bind_param("ii", $offset, $itemsPerPage);
         $stmt->execute();
         $result = $stmt->get_result();
-        return $result->fetch_all(MYSQLI_ASSOC);     
+        return $result->fetch_all(MYSQLI_ASSOC);
     }
 
     /**
@@ -221,5 +221,20 @@ class QuestionAndAnswerModel extends DB
         $stmt->execute();
         $result = $stmt->get_result();
         return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    function CreateQuestion($question, $tags, $userId)
+    {
+
+
+        $query = "INSERT INTO questions (Question, Tags, UserID, CreatedDate, NumberAnswerers) 
+                  VALUES (?, ?, ?, NOW(),0)";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("ssi", $question, $tags, $userId);
+        if (!$stmt->execute()) {
+            throw new Exception("Execute failed: " . $stmt->error);
+        }
+        $stmt->close();
+        return true;
     }
 }
